@@ -1,0 +1,6 @@
+mode: ContinuousDeployment
+branches: {}
+major-version-bump-message: '^([MAJOR])'
+minor-version-bump-message: '^([FEATURE]|[FEAT])'
+patch-version-bump-message: '^([FIX]|[CHORE])'
+next-version: 1.0.0

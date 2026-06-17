@@ -1,0 +1,84 @@
+name: Deploy to environment
+
+# Reusable workflow: builds the shell for a single environment and publishes the
+# static bundle to that environment's S3 bucket. Called once per environment by
+# deploy.yml. The `environment` input binds the job to the matching GitHub
+# Environment, which is where the approval gate and the per-env vars/secrets live.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment name (dev/qa/staging/production)
+        required: true
+        type: string
+      channel:
+        description: Release channel prefix (alpha/beta/stable)
+        required: true
+        type: string
+      include_pr:
+        description: Append the PR number to the version tag
+        required: true
+        type: boolean
+      semver:
+        description: MAJOR.MINOR.PATCH from GitVersion
+        required: true
+        type: string
+      pr_number:
+        description: PR number behind the merge commit
+        required: false
+        type: string
+        default: "0"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Compute version tag
+        id: ver
+        run: |
+          if [ "${{ inputs.include_pr }}" = "true" ]; then
+            tag="${{ inputs.channel }}-${{ inputs.semver }}-${{ inputs.pr_number }}"
+          else
+            tag="${{ inputs.channel }}-${{ inputs.semver }}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Version tag: $tag"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          # Remote origins for this environment (set as Environment variables).
+          VITE_APPOINTMENTS_REMOTE_URL: ${{ vars.VITE_APPOINTMENTS_REMOTE_URL }}
+          VITE_CVC_REMOTE_URL: ${{ vars.VITE_CVC_REMOTE_URL }}
+          VITE_PUBLIC_PATH: ${{ vars.VITE_PUBLIC_PATH }}
+          VITE_APP_VERSION: ${{ steps.ver.outputs.tag }}
+        run: npm run build
+
+      - name: Configure AWS credentials (OIDC) (mocked)
+        run: |
+          echo "MOCK: would assume role ${{ vars.AWS_DEPLOY_ROLE_ARN }} in region ${{ vars.AWS_REGION }} via OIDC"
+          echo "MOCK: skipping real aws-actions/configure-aws-credentials"
+
+      - name: Deploy to S3 (mocked)
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          VERSION_TAG: ${{ steps.ver.outputs.tag }}
+          CHANNEL: ${{ inputs.channel }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          echo "MOCK: deploying environment '$ENVIRONMENT' (channel: $CHANNEL)"
+          echo "MOCK: would sync local folder 'dist/' to s3://${S3_BUCKET}/${VERSION_TAG}/"

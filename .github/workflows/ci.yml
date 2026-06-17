@@ -1,0 +1,26 @@
+name: CI
+
+# Pull-request validation gate for trunk-based development. Must pass before a
+# PR can be merged into main (enforce via a branch protection rule on main).
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Type-check & build
+        run: npm run build
+      - name: Run tests (mocked)
+        run: |
+          echo "MOCK: would run the test suite here (no test script wired up yet)"
