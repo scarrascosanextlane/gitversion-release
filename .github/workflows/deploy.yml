@@ -35,7 +35,7 @@ jobs:
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3
         with:
-          versionSpec: "6.x"
+          versionSpec: '5.x'
 
       - name: Run GitVersion
         id: gitversion
@@ -94,34 +94,3 @@ jobs:
       semver: ${{ needs.version.outputs.semver }}
       pr_number: ${{ needs.version.outputs.pr }}
     secrets: inherit
-
-  # ----------------------------------------------------------------------------
-  # Tag the released version on the merge commit. This is what lets the version
-  # advance: GitVersion computes the next version RELATIVE TO the most recent
-  # vX.Y.Z tag, so without this step every build re-anchors to next-version and
-  # the patch never increments (1.0.0, 1.0.0, 1.0.0...). With it, the next [FIX]
-  # merge bumps to 1.0.3, the one after to 1.0.4, and so on.
-  tag-release:
-    needs: [version, deploy-production]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # required to push the tag
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create and push version tag
-        env:
-          SEMVER: ${{ needs.version.outputs.semver }}
-        run: |
-          tag="v${SEMVER}"
-          if git rev-parse "$tag" >/dev/null 2>&1; then
-            echo "Tag $tag already exists; nothing to do."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$tag" -m "Release $SEMVER"
-          git push origin "$tag"
-          echo "Pushed tag $tag"
