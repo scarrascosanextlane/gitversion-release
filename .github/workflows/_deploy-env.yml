@@ -15,19 +15,10 @@ on:
         description: Release channel prefix (alpha/beta/stable)
         required: true
         type: string
-      include_pr:
-        description: Append the PR number to the version tag
-        required: true
-        type: boolean
       semver:
         description: MAJOR.MINOR.PATCH from GitVersion
         required: true
         type: string
-      pr_number:
-        description: PR number behind the merge commit
-        required: false
-        type: string
-        default: "0"
 
 permissions:
   id-token: write
@@ -48,11 +39,7 @@ jobs:
       - name: Compute version tag
         id: ver
         run: |
-          if [ "${{ inputs.include_pr }}" = "true" ]; then
-            tag="${{ inputs.channel }}-${{ inputs.semver }}-${{ inputs.pr_number }}"
-          else
-            tag="${{ inputs.channel }}-${{ inputs.semver }}"
-          fi
+          tag="${{ inputs.channel }}-${{ inputs.semver }}"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Version tag: $tag"
 
