@@ -11,7 +11,6 @@ on:
 permissions:
   id-token: write # required for AWS OIDC
   contents: read
-  pull-requests: read # to resolve the PR number behind the merge commit
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -19,14 +18,13 @@ concurrency:
 
 jobs:
   # ----------------------------------------------------------------------------
-  # Compute the semantic version (GitVersion, trunk-based) and the PR number of
-  # the merge commit. Both are passed down to every environment.
+  # Compute the semantic version (GitVersion, trunk-based). It is passed down to
+  # every environment.
   # ----------------------------------------------------------------------------
   version:
     runs-on: ubuntu-latest
     outputs:
       semver: ${{ steps.gitversion.outputs.majorMinorPatch }}
-      pr: ${{ steps.pr.outputs.number }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,25 +39,13 @@ jobs:
         id: gitversion
         uses: gittools/actions/gitversion/execute@v3
 
-      - name: Resolve PR number
-        id: pr
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          num=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
-            --jq '.[0].number // empty' 2>/dev/null || true)
-          echo "number=${num:-0}" >> "$GITHUB_OUTPUT"
-          echo "Resolved PR number: ${num:-0}"
-
   deploy-dev:
     needs: version
     uses: ./.github/workflows/_deploy-env.yml
     with:
       environment: dev
       channel: alpha
-      include_pr: true
       semver: ${{ needs.version.outputs.semver }}
-      pr_number: ${{ needs.version.outputs.pr }}
     secrets: inherit
 
   deploy-qa:
@@ -68,9 +54,7 @@ jobs:
     with:
       environment: qa
       channel: alpha
-      include_pr: true
       semver: ${{ needs.version.outputs.semver }}
-      pr_number: ${{ needs.version.outputs.pr }}
     secrets: inherit
 
   deploy-staging:
@@ -79,9 +63,7 @@ jobs:
     with:
       environment: staging
       channel: beta
-      include_pr: true
       semver: ${{ needs.version.outputs.semver }}
-      pr_number: ${{ needs.version.outputs.pr }}
     secrets: inherit
 
   deploy-production:
@@ -90,7 +72,5 @@ jobs:
     with:
       environment: production
       channel: stable
-      include_pr: false
       semver: ${{ needs.version.outputs.semver }}
-      pr_number: ${{ needs.version.outputs.pr }}
     secrets: inherit
