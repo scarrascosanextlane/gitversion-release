@@ -61,21 +61,21 @@ jobs:
 
       - name: Build
         env:
-          # Remote origins for this environment (set as Environment variables).
-          VITE_APPOINTMENTS_REMOTE_URL: ${{ vars.VITE_APPOINTMENTS_REMOTE_URL }}
-          VITE_CVC_REMOTE_URL: ${{ vars.VITE_CVC_REMOTE_URL }}
-          VITE_PUBLIC_PATH: ${{ vars.VITE_PUBLIC_PATH }}
+          # Remote origins for this environment (set as Environment secrets).
+          VITE_APPOINTMENTS_REMOTE_URL: ${{ secrets.VITE_APPOINTMENTS_REMOTE_URL }}
+          VITE_CVC_REMOTE_URL: ${{ secrets.VITE_CVC_REMOTE_URL }}
+          VITE_PUBLIC_PATH: ${{ secrets.VITE_PUBLIC_PATH }}
           VITE_APP_VERSION: ${{ steps.ver.outputs.tag }}
         run: npm run build
 
       - name: Configure AWS credentials (OIDC) (mocked)
         run: |
-          echo "MOCK: would assume role ${{ vars.AWS_DEPLOY_ROLE_ARN }} in region ${{ vars.AWS_REGION }} via OIDC"
+          echo "MOCK: would assume role ${{ secrets.AWS_DEPLOY_ROLE_ARN }} in region ${{ secrets.AWS_REGION }} via OIDC"
           echo "MOCK: skipping real aws-actions/configure-aws-credentials"
 
       - name: Deploy to S3 (mocked)
         env:
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
           VERSION_TAG: ${{ steps.ver.outputs.tag }}
           CHANNEL: ${{ inputs.channel }}
           ENVIRONMENT: ${{ inputs.environment }}
