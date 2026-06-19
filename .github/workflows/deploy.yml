@@ -10,16 +10,12 @@ on:
 
 permissions:
   id-token: write # required for AWS OIDC
-  contents: read
-
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
+  contents: write # required to push the version/environment tags
 
 jobs:
   # ----------------------------------------------------------------------------
   # Compute the semantic version (GitVersion, trunk-based). It is passed down to
-  # every environment.
+  # every environment, and the commit is tagged with that version.
   # ----------------------------------------------------------------------------
   version:
     runs-on: ubuntu-latest
@@ -39,11 +35,26 @@ jobs:
         id: gitversion
         uses: gittools/actions/gitversion/execute@v3
 
+      - name: Tag commit with version
+        env:
+          SEMVER: ${{ steps.gitversion.outputs.majorMinorPatch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git rev-parse -q --verify "refs/tags/${SEMVER}" >/dev/null; then
+            echo "Tag ${SEMVER} already exists, skipping"
+          else
+            git tag "${SEMVER}"
+            git push origin "${SEMVER}"
+            echo "Created tag ${SEMVER}"
+          fi
+
   deploy-dev:
     needs: version
     uses: ./.github/workflows/_deploy-env.yml
     with:
       environment: dev
+      env_tag: dev
       channel: alpha
       semver: ${{ needs.version.outputs.semver }}
     secrets: inherit
@@ -53,6 +64,7 @@ jobs:
     uses: ./.github/workflows/_deploy-env.yml
     with:
       environment: qa
+      env_tag: qa
       channel: alpha
       semver: ${{ needs.version.outputs.semver }}
     secrets: inherit
@@ -62,6 +74,7 @@ jobs:
     uses: ./.github/workflows/_deploy-env.yml
     with:
       environment: staging
+      env_tag: stg
       channel: beta
       semver: ${{ needs.version.outputs.semver }}
     secrets: inherit
@@ -71,6 +84,7 @@ jobs:
     uses: ./.github/workflows/_deploy-env.yml
     with:
       environment: production
+      env_tag: prod
       channel: stable
       semver: ${{ needs.version.outputs.semver }}
     secrets: inherit
