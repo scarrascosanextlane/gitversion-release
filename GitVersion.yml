@@ -1,4 +1,12 @@
-mode: Mainline
 major-version-bump-message: '^\[MAJOR\]'
 minor-version-bump-message: '^\[(FEATURE|FEAT)\]'
 patch-version-bump-message: '^\[(FIX|CHORE)\]'
+
+strategies:
+  - ConfiguredNextVersion
+  - Mainline
+
+branches:
+  main:
+    mode: ContinuousDeployment
+    label: ''
